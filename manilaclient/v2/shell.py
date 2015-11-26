@@ -609,11 +609,87 @@ def do_create(cs, args):
               'optimizations. Default=False.',
               default=False)
 @api_versions.experimental_api
-@api_versions.wraps("2.5")
+@api_versions.wraps("2.5", "2.11")
 def do_migrate(cs, args):
+    """(Deprecated) Migrates share to a new host."""
+    share = _find_share(cs, args.share)
+    share.migration_start(args.host, args.force_host_copy, True)
+
+
+@cliutils.arg(
+    'share', metavar='<share>', help='Name or ID of share to migrate.')
+@cliutils.arg('host', metavar='<host#pool>', help='Destination host and pool.')
+@cliutils.arg('--force-host-copy', metavar='<True|False>',
+              choices=['True', 'False'], required=False,
+              help='Enables or disables generic host-based '
+              'force-migration, which bypasses driver '
+              'optimizations. Default=False.',
+              default=False)
+@cliutils.arg('--notify', metavar='<True|False>',
+              choices=['True', 'False'], required=False,
+              help='Enables or disables notification of data copying completed'
+              '. Default=True.',
+              default=True)
+@api_versions.experimental_api
+@api_versions.wraps("2.13")
+def do_migration_start(cs, args):
     """Migrates share to a new host."""
     share = _find_share(cs, args.share)
-    share.migrate_share(args.host, args.force_host_copy)
+    share.migration_start(args.host, args.force_host_copy, args.notify)
+
+
+@cliutils.arg(
+    'share', metavar='<share>', help='Name or ID of share to '
+                                     'complete migration.')
+@api_versions.experimental_api
+@api_versions.wraps("2.13")
+def do_migration_complete(cs, args):
+    """Completes migration for a given share."""
+    share = _find_share(cs, args.share)
+    share.migration_complete()
+
+
+@cliutils.arg(
+    'share', metavar='<share>', help='Name or ID of share to '
+                                     'cancel migration.')
+@api_versions.experimental_api
+@api_versions.wraps("2.13")
+def do_migration_cancel(cs, args):
+    """Attempts to cancel migration for a given share during copying."""
+    share = _find_share(cs, args.share)
+    share.migration_cancel()
+
+
+@cliutils.arg(
+    'share',
+    metavar='<share>',
+    help='Name or ID of the share to modify.')
+@cliutils.arg(
+    'state',
+    metavar='<state>',
+    default=None,
+    help=('Indicate which task state to assign the share. Options include '
+          'migration_error, migration_success, migration_cancelled.'))
+@api_versions.experimental_api
+@api_versions.wraps("2.13")
+def do_reset_task_state(cs, args):
+    """Explicitly update the state of a share."""
+    share = _find_share(cs, args.share)
+    share.reset_task_state(args.state)
+
+
+@cliutils.arg(
+    'share',
+    metavar='<share>',
+    help='Name or ID of the share to get share migration'
+         ' progress information.')
+@api_versions.experimental_api
+@api_versions.wraps("2.13")
+def do_migration_get_progress(cs, args):
+    """Attempts to get migration progress for a given share during copying."""
+    share = _find_share(cs, args.share)
+    result = share.migration_get_progress()
+    cliutils.print_dict(result[1])
 
 
 @cliutils.arg(

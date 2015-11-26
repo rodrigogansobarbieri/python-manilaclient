@@ -501,9 +501,10 @@ class SharesTest(utils.TestCase):
     @ddt.data(
         ("2.6", "os-migrate_share"),
         ("2.7", "migrate_share"),
+        ("2.13", "migration_start"),
     )
     @ddt.unpack
-    def test_migrate_share(self, microversion, action_name):
+    def test_migration_start(self, microversion, action_name):
         share = "fake_share"
         host = "fake_host"
         force_host_copy = "fake_force_host_copy"
@@ -513,9 +514,71 @@ class SharesTest(utils.TestCase):
 
         with mock.patch.object(manager, "_action",
                                mock.Mock(return_value="fake")):
-            result = manager.migrate_share(share, host, force_host_copy)
+            if version < api_versions.APIVersion('2.13'):
+                result = manager.migration_start(share, host, force_host_copy)
+            else:
+                result = manager.migration_start(share, host, force_host_copy,
+                                                 True)
 
             manager._action.assert_called_once_with(
                 action_name, share,
-                {"host": host, "force_host_copy": force_host_copy})
+                {"host": host, "force_host_copy": force_host_copy,
+                 "notify": True})
+            self.assertEqual("fake", result)
+
+    def test_migration_complete(self):
+        share = "fake_share"
+        version = api_versions.APIVersion("2.13")
+        mock_microversion = mock.Mock(api_version=version)
+        manager = shares.ShareManager(api=mock_microversion)
+
+        with mock.patch.object(manager, "_action",
+                               mock.Mock(return_value="fake")):
+            result = manager.migration_complete(share)
+
+            manager._action.assert_called_once_with(
+                "migration_complete", share)
+            self.assertEqual("fake", result)
+
+    def test_migration_get_progress(self):
+        share = "fake_share"
+        version = api_versions.APIVersion("2.13")
+        mock_microversion = mock.Mock(api_version=version)
+        manager = shares.ShareManager(api=mock_microversion)
+
+        with mock.patch.object(manager, "_action",
+                               mock.Mock(return_value="fake")):
+            result = manager.migration_get_progress(share)
+
+            manager._action.assert_called_once_with(
+                "migration_get_progress", share)
+            self.assertEqual("fake", result)
+
+    def test_reset_task_state(self):
+        share = "fake_share"
+        state = "fake_state"
+        version = api_versions.APIVersion("2.13")
+        mock_microversion = mock.Mock(api_version=version)
+        manager = shares.ShareManager(api=mock_microversion)
+
+        with mock.patch.object(manager, "_action",
+                               mock.Mock(return_value="fake")):
+            result = manager.reset_task_state(share, state)
+
+            manager._action.assert_called_once_with(
+                "reset_task_state", share, {'task_state': state})
+            self.assertEqual("fake", result)
+
+    def test_migration_cancel(self):
+        share = "fake_share"
+        version = api_versions.APIVersion("2.13")
+        mock_microversion = mock.Mock(api_version=version)
+        manager = shares.ShareManager(api=mock_microversion)
+
+        with mock.patch.object(manager, "_action",
+                               mock.Mock(return_value="fake")):
+            result = manager.migration_cancel(share)
+
+            manager._action.assert_called_once_with(
+                "migration_cancel", share)
             self.assertEqual("fake", result)
