@@ -621,8 +621,8 @@ def do_create(cs, args):
     help='Name or ID of share to migrate.')
 @cliutils.arg(
     'host',
-    metavar='<host#pool>',
-    help='Destination host and pool.')
+    metavar='<host@backend#pool>',
+    help="Destination host, backend and pool in format 'host@backend#pool'.")
 @cliutils.arg(
     '--force-host-copy',
     '--force_host_copy',
@@ -646,11 +646,11 @@ def do_migrate(cs, args):
     help='Name or ID of share to migrate.')
 @cliutils.arg(
     'host',
-    metavar='<host#pool>',
-    help='Destination host and pool.')
+    metavar='<host@backend#pool>',
+    help="Destination host, backend and pool in format 'host@backend#pool'.")
 @cliutils.arg(
-    '--force-host-copy',
-    '--force_host_copy',
+    '--skip_optimized_migration',
+    '--skip-optimized-migration',
     metavar='<True|False>',
     choices=['True', 'False'],
     required=False,
@@ -658,18 +658,44 @@ def do_migrate(cs, args):
          'bypasses driver optimizations. Default=False.',
     default=False)
 @cliutils.arg(
-    '--notify',
+    '--complete',
     metavar='<True|False>',
     choices=['True', 'False'],
     required=False,
-    help='Enables or disables notification of data copying completed. '
-         'Default=True.',
+    help='Chooses whether migration should complete in a single API call or '
+         'pause before disruption. Default=True.',
     default=True)
-@api_versions.wraps("2.15")
+@cliutils.arg(
+    '--preserve-metadata',
+    '--preserve_metadata',
+    metavar='<True|False>',
+    choices=['True', 'False'],
+    required=False,
+    help='Chooses whether migration should be forced to preserve all file '
+         'metadata when moving its contents. Default=True.',
+    default=True)
+@cliutils.arg(
+    '--writable',
+    metavar='<True|False>',
+    choices=['True', 'False'],
+    required=False,
+    help='Chooses whether migration should be forced to remain writable '
+         'while contents are being moved. Default=True.',
+    default=True)
+@cliutils.arg(
+    '--new_share_network_id',
+    '--new-share-network-id',
+    metavar='<new_share_network_id>',
+    required=False,
+    help='Specifies a new share network if desired to change. Default=None.',
+    default=None)
+@api_versions.wraps("2.19")
 def do_migration_start(cs, args):
     """Migrates share to a new host (Admin only, Experimental)."""
     share = _find_share(cs, args.share)
-    share.migration_start(args.host, args.force_host_copy, args.notify)
+    share.migration_start(args.host, args.skip_optimized_migration,
+                          args.complete, args.preserve_metadata, args.writable,
+                          args.new_share_network_id)
 
 
 @cliutils.arg(
