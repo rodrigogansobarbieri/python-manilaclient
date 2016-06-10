@@ -1,0 +1,11 @@
+---
+prelude: >
+  - Added new parameters to Share Migration experimental API.
+features:
+  - Share Migration now has parameters to force share migration
+    procedure to maintain the share writable and to preserve its
+    metadata when migrating.
+deprecations:
+  - Renamed Share Migration 'notify' parameter to complete, to
+    better represent the parameter's functionality.
+

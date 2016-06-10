@@ -526,28 +526,42 @@ class SharesTest(utils.TestCase):
         ("2.7", "migrate_share"),
         ("2.14", "migrate_share"),
         ("2.15", "migration_start"),
+        ("2.18", "migration_start"),
+        ("2.19", "migration_start"),
     )
     @ddt.unpack
     def test_migration_start(self, microversion, action_name):
         share = "fake_share"
         host = "fake_host"
-        force_host_copy = "fake_force_host_copy"
+        force_host_copy = "fake"
         version = api_versions.APIVersion(microversion)
         manager = shares.ShareManager(
             api=fakes.FakeClient(api_version=version))
 
         with mock.patch.object(manager, "_action",
                                mock.Mock(return_value="fake")):
+            result = manager.migration_start(share, host, force_host_copy)
             if version < api_versions.APIVersion('2.15'):
-                result = manager.migration_start(share, host, force_host_copy)
+                manager._action.assert_called_once_with(
+                    action_name, share,
+                    {"host": host, "force_host_copy": force_host_copy})
+            elif version < api_versions.APIVersion('2.19'):
+                manager._action.assert_called_once_with(
+                    action_name, share, {
+                        "host": host, "force_host_copy": force_host_copy,
+                        "notify": True,
+                    })
             else:
-                result = manager.migration_start(share, host, force_host_copy,
-                                                 True)
+                manager._action.assert_called_once_with(
+                    action_name, share, {
+                        "host": host,
+                        "skip_optimized_migration": force_host_copy,
+                        "complete": True,
+                        "preserve_metadata": True,
+                        "writable": True,
+                        "new_share_network_id": None,
+                    })
 
-            manager._action.assert_called_once_with(
-                action_name, share,
-                {"host": host, "force_host_copy": force_host_copy,
-                 "notify": True})
             self.assertEqual("fake", result)
 
     def test_migration_complete(self):
