@@ -43,9 +43,11 @@ class Share(common_base.Resource):
         """Unmanage this share."""
         self.manager.unmanage(self, **kwargs)
 
-    def migration_start(self, host, force_host_copy, notify=True):
+    def migration_start(self, host, force_host_copy, complete=True,
+                        preserve_metadata=True, writable=True):
         """Migrate the share to a new host."""
-        self.manager.migration_start(self, host, force_host_copy, notify)
+        self.manager.migration_start(self, host, force_host_copy, complete,
+                                     preserve_metadata, writable)
 
     def migration_complete(self):
         """Complete migration of a share."""
@@ -144,37 +146,53 @@ class ShareManager(base.ManagerWithFind):
         }
         return self._create('/shares', {'share': body}, 'share')
 
-    def _do_migrate_start(self, share, host, force_host_copy, notify,
-                          action_name):
+    def _do_migrate_start(self, share, host, force_host_copy, complete,
+                          preserve_metadata, writable, action_name):
         """Migrate share to new host and pool.
 
         :param share: The :class:'share' to migrate
         :param host: The destination host and pool
         :param force_host_copy: Skip driver optimizations
-        :param notify: whether migration completion should be notified
+        :param complete: whether migration completion should be notified
+        :param preserve_metadata: whether migration must preserve file metadata
+        :param writable: whether share must remain writable during migration
         :param action_name: action name to be used in request. Changes
             according to desired microversion.
         """
-
         return self._action(
             action_name, share,
             {"host": host, "force_host_copy": force_host_copy,
-             "notify": notify})
+             "complete": complete,
+             "preserve_metadata": preserve_metadata,
+             "writable": writable})
 
-    @api_versions.wraps("2.5", "2.6")
-    def migration_start(self, share, host, force_host_copy):
+    @api_versions.wraps("2.5", "2.6")  # noqa
+    def migration_start(self, share, host, force_host_copy, complete,
+                        preserve_metadata, writable):
         return self._do_migrate_start(
-            share, host, force_host_copy, True, "os-migrate_share")
+            share, host, force_host_copy, True, False, False,
+            "os-migrate_share")
 
     @api_versions.wraps("2.7", "2.14")  # noqa
-    def migration_start(self, share, host, force_host_copy):
+    def migration_start(self, share, host, force_host_copy, complete,
+                        preserve_metadata, writable):
         return self._do_migrate_start(
-            share, host, force_host_copy, True, "migrate_share")
+            share, host, force_host_copy, True, False, False,
+            "migrate_share")
 
-    @api_versions.wraps("2.15")  # noqa
-    def migration_start(self, share, host, force_host_copy, notify):
+    @api_versions.wraps("2.15", "2.17")  # noqa
+    def migration_start(self, share, host, force_host_copy, complete,
+                        preserve_metadata, writable):
         return self._do_migrate_start(
-            share, host, force_host_copy, notify, "migration_start")
+            share, host, force_host_copy, complete, False, False,
+            "migrate_share")
+
+    @api_versions.wraps("2.18")
+    def migration_start(self, share, host, force_host_copy, complete,
+                        preserve_metadata, writable):
+        return self._do_migrate_start(
+            share, host, force_host_copy, complete, preserve_metadata,
+            writable, "migration_start")
 
     @api_versions.wraps("2.15")
     def reset_task_state(self, share, task_state):
