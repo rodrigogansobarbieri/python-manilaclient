@@ -531,7 +531,7 @@ class SharesTest(utils.TestCase):
     def test_migration_start(self, microversion, action_name):
         share = "fake_share"
         host = "fake_host"
-        force_host_copy = "fake_force_host_copy"
+        force_host_copy = "fake"
         version = api_versions.APIVersion(microversion)
         mock_microversion = mock.Mock(api_version=version)
         manager = shares.ShareManager(api=mock_microversion)
@@ -539,15 +539,18 @@ class SharesTest(utils.TestCase):
         with mock.patch.object(manager, "_action",
                                mock.Mock(return_value="fake")):
             if version < api_versions.APIVersion('2.15'):
-                result = manager.migration_start(share, host, force_host_copy)
+                result = manager.migration_start(share, host, force_host_copy,
+                                                 True, False, False)
             else:
                 result = manager.migration_start(share, host, force_host_copy,
-                                                 True)
+                                                 True, False, False)
 
             manager._action.assert_called_once_with(
                 action_name, share,
                 {"host": host, "force_host_copy": force_host_copy,
-                 "notify": True})
+                 "complete": True,
+                 "preserve_metadata": False,
+                 "writable": False})
             self.assertEqual("fake", result)
 
     def test_migration_complete(self):

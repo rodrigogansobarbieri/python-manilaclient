@@ -660,19 +660,38 @@ def do_migrate(cs, args):
          'bypasses driver optimizations. Default=False.',
     default=False)
 @cliutils.arg(
-    '--notify',
+    '--complete',
     metavar='<True|False>',
     choices=['True', 'False'],
     required=False,
-    help='Enables or disables notification of data copying completed. '
-         'Default=True.',
+    help='Chooses whether migration should complete in a single API call or '
+         'pause before disruption. Default=True.',
+    default=True)
+@cliutils.arg(
+    '--preserve-metadata',
+    '--preserve_metadata',
+    metavar='<True|False>',
+    choices=['True', 'False'],
+    required=False,
+    help='Chooses whether migration should be forced to preserve all file '
+         'metadata when moving its contents. Default=True.',
+    default=True)
+@cliutils.arg(
+    '--writable',
+    '--writable',
+    metavar='<True|False>',
+    choices=['True', 'False'],
+    required=False,
+    help='Chooses whether migration should be forced to remain writable '
+         'while contents are being moved. Default=True.',
     default=True)
 @api_versions.experimental_api
-@api_versions.wraps("2.15")
+@api_versions.wraps("2.18")
 def do_migration_start(cs, args):
     """Migrates share to a new host (Admin only, Experimental)."""
     share = _find_share(cs, args.share)
-    share.migration_start(args.host, args.force_host_copy, args.notify)
+    share.migration_start(args.host, args.force_host_copy, args.complete,
+                          args.preserve_metadata, args.writable)
 
 
 @cliutils.arg(
