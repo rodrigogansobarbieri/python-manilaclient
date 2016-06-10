@@ -43,9 +43,13 @@ class Share(common_base.Resource):
         """Unmanage this share."""
         self.manager.unmanage(self, **kwargs)
 
-    def migration_start(self, host, force_host_copy, notify=True):
+    def migration_start(self, host, skip_optimized_migration, complete=True,
+                        preserve_metadata=True, writable=True,
+                        nondisruptive=False, new_share_network_id=None):
         """Migrate the share to a new host."""
-        self.manager.migration_start(self, host, force_host_copy, notify)
+        self.manager.migration_start(self, host, skip_optimized_migration,
+                                     complete, preserve_metadata, writable,
+                                     nondisruptive, new_share_network_id)
 
     def migration_complete(self):
         """Complete migration of a share."""
@@ -144,40 +148,50 @@ class ShareManager(base.ManagerWithFind):
         }
         return self._create('/shares', {'share': body}, 'share')
 
-    def _do_migrate_start(self, share, host, force_host_copy, notify,
-                          action_name):
-        """Migrate share to new host and pool.
-
-        :param share: The :class:'share' to migrate
-        :param host: The destination host and pool
-        :param force_host_copy: Skip driver optimizations
-        :param notify: whether migration completion should be notified
-        :param action_name: action name to be used in request. Changes
-            according to desired microversion.
-        """
-
-        return self._action(
-            action_name, share,
-            {"host": host, "force_host_copy": force_host_copy,
-             "notify": notify})
-
     @api_versions.wraps("2.5", "2.6")
     @api_versions.experimental_api
-    def migration_start(self, share, host, force_host_copy):
-        return self._do_migrate_start(
-            share, host, force_host_copy, True, "os-migrate_share")
+    def migration_start(self, share, host, skip_optimized_migration,
+                        complete=True, preserve_metadata=True, writable=True,
+                        nondisruptive=False, new_share_network_id=None):
+        return self._action(
+            "os-migrate_share", share,
+            {"host": host, "force_host_copy": skip_optimized_migration})
 
     @api_versions.wraps("2.7", "2.14")  # noqa
     @api_versions.experimental_api
-    def migration_start(self, share, host, force_host_copy):
-        return self._do_migrate_start(
-            share, host, force_host_copy, True, "migrate_share")
+    def migration_start(self, share, host, skip_optimized_migration,
+                        complete=True, preserve_metadata=True, writable=True,
+                        nondisruptive=False, new_share_network_id=None):
+        return self._action(
+            "migrate_share", share,
+            {"host": host, "force_host_copy": skip_optimized_migration})
 
-    @api_versions.wraps("2.15")  # noqa
+    @api_versions.wraps("2.15", "2.21")  # noqa
     @api_versions.experimental_api
-    def migration_start(self, share, host, force_host_copy, notify):
-        return self._do_migrate_start(
-            share, host, force_host_copy, notify, "migration_start")
+    def migration_start(self, share, host, skip_optimized_migration,
+                        complete=True, preserve_metadata=True, writable=True,
+                        nondisruptive=False, new_share_network_id=None):
+        return self._action(
+            "migration_start", share, {
+                "host": host,
+                "force_host_copy": skip_optimized_migration,
+                "notify": complete,
+            })
+
+    @api_versions.wraps("2.22")  # noqa
+    @api_versions.experimental_api
+    def migration_start(self, share, host, skip_optimized_migration,
+                        complete=False, preserve_metadata=True, writable=True,
+                        nondisruptive=False, new_share_network_id=None):
+        return self._action(
+            "migration_start", share, {
+                "host": host,
+                "skip_optimized_migration": skip_optimized_migration,
+                "preserve_metadata": preserve_metadata,
+                "writable": writable,
+                "nondisruptive": nondisruptive,
+                "new_share_network_id": new_share_network_id,
+            })
 
     @api_versions.wraps("2.15")
     @api_versions.experimental_api

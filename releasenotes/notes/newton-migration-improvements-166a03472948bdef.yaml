@@ -1,0 +1,16 @@
+---
+prelude: >
+  - Added new parameters to Share Migration experimental API.
+features:
+  - Share Migration now has parameters to force share migration
+    procedure to maintain the share writable, preserve its metadata
+    and be non-disruptive when migrating.
+  - Added parameter to change share network when performing
+    migration.
+deprecations:
+  - Renamed Share Migration 'force_host_copy' parameter to
+    'skip_optimized_migration', to better represent the parameter's
+    functionality.
+upgrades:
+  - Removed Share Migration 'notify' parameter, it is no longer
+    possible to perform a 1-phase migration.
