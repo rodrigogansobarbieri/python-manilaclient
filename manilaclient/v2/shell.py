@@ -26,6 +26,7 @@ import six
 from manilaclient import api_versions
 from manilaclient.common import constants
 from manilaclient import exceptions
+from manilaclient.openstack.common.apiclient import base as common_base
 from manilaclient.openstack.common.apiclient import utils as apiclient_utils
 from manilaclient.openstack.common import cliutils
 from manilaclient.v2 import quotas
@@ -724,6 +725,18 @@ def do_migration_cancel(cs, args):
 @cliutils.arg(
     'share',
     metavar='<share>',
+    help='Name or ID of share to cancel data copy.')
+@api_versions.experimental_api
+@api_versions.wraps("2.18")
+def do_data_copy_cancel(cs, args):
+    """Cancels data copy of a given share when copying (Experimental)."""
+    share = _find_share(cs, args.share)
+    share.data_copy_cancel()
+
+
+@cliutils.arg(
+    'share',
+    metavar='<share>',
     help='Name or ID of the share to modify.')
 @cliutils.arg(
     '--task-state',
@@ -743,10 +756,7 @@ def do_migration_cancel(cs, args):
 @api_versions.experimental_api
 @api_versions.wraps("2.15")
 def do_reset_task_state(cs, args):
-    """Explicitly update the task state of a share
-
-    (Admin only, Experimental).
-    """
+    """Explicitly update the task state of a share (Experimental)."""
     share = _find_share(cs, args.share)
     share.reset_task_state(args.task_state)
 
@@ -767,6 +777,104 @@ def do_migration_get_progress(cs, args):
     result = share.migration_get_progress()
     # NOTE(ganso): result[0] is response code, result[1] is dict body
     cliutils.print_dict(result[1])
+
+
+@cliutils.arg(
+    'share',
+    metavar='<share>',
+    help='Name or ID of the share to get data copy progress information.')
+@api_versions.experimental_api
+@api_versions.wraps("2.18")
+def do_data_copy_get_progress(cs, args):
+    """Gets data copy progress of a given share when copying
+
+    (Experimental).
+    """
+    share = _find_share(cs, args.share)
+    result = share.data_copy_get_progress()
+    # NOTE(ganso): result[0] is response code, result[1] is dict body
+    cliutils.print_dict(result[1])
+
+
+@cliutils.arg(
+    'source_share',
+    metavar='<source_share>',
+    help='Name or ID of share to copy data from.')
+@cliutils.arg(
+    'destination_share',
+    metavar='<destination_share>',
+    help='Name or ID of share to copy data to.')
+@cliutils.arg(
+    '--source_path',
+    '--source-path',
+    metavar='<source_path>',
+    required=False,
+    help="Path in the source share to copy data from. Default is empty "
+         "(root).",
+    default='')
+@cliutils.arg(
+    '--destination_path',
+    '--destination-path',
+    metavar='<destination_path>',
+    required=False,
+    help="Path in the destination share to copy data to. Default is empty "
+         "(root).",
+    default='')
+@cliutils.arg(
+    '--read_only',
+    '--read-only',
+    metavar='<True|False>',
+    choices=['True', 'False'],
+    required=False,
+    help="Chooses whether the source share's access rules should be "
+         "temporarily changed to read-only while data copying. Default=False.",
+    default=False)
+@cliutils.arg(
+    '--check_space',
+    '--check-space',
+    metavar='<True|False>',
+    choices=['True', 'False'],
+    required=False,
+    help='Chooses whether available space should be verified before attempting'
+         ' to copy files. Default=False.',
+    default=False)
+@cliutils.arg(
+    '--overwrite_policy',
+    '--overwrite-policy',
+    metavar='<overwrite_policy>',
+    required=False,
+    help="Chooses whether data copy should be attempted even if there is no "
+         "space available and if any existing data should be overwritten. "
+         "Possible values are 'overwrite', 'force_overwrite', 'update', "
+         "'force_update', 'no_overwrite', Default='overwrite'.",
+    default='overwrite')
+@api_versions.experimental_api
+@api_versions.wraps("2.18")
+def do_data_copy_from_share(cs, args):
+    """Copies data from a given share to another share (Experimental)."""
+    share = _find_share(cs, args.source_share)
+    dest_share = _find_share(cs, args.destination_share)
+    share.data_copy_from_share(
+        common_base.getid(dest_share), args.source_path, args.destination_path,
+        args.read_only, args.check_space, args.overwrite_policy)
+
+
+@cliutils.arg(
+    'share',
+    metavar='<share>',
+    help='Name or ID of share to from which to erase data.')
+@cliutils.arg(
+    '--path',
+    metavar='<path>',
+    required=False,
+    help="Path in the share to erase data from. Default is empty (root).",
+    default='')
+@api_versions.experimental_api
+@api_versions.wraps("2.18")
+def do_data_erase(cs, args):
+    """Erases data from a given share (Experimental)."""
+    share = _find_share(cs, args.share)
+    share.data_erase(args.path)
 
 
 @cliutils.arg(

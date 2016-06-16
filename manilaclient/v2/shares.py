@@ -65,6 +65,25 @@ class Share(common_base.Resource):
         """Reset the task state of a given share."""
         self.manager.reset_task_state(self, task_state)
 
+    def data_copy_from_share(self, dest_share_id, source_path, dest_path,
+                             read_only, check_space, overwrite_policy):
+        """Copies data from a given share to another share."""
+        self.manager.data_copy_from_share(
+            self, dest_share_id, source_path, dest_path, read_only,
+            check_space, overwrite_policy)
+
+    def data_erase(self, path):
+        """Erases data from a given share."""
+        self.manager.data_erase(self, path)
+
+    def data_copy_cancel(self):
+        """Cancels data copy of a given share when copying."""
+        self.manager.data_copy_cancel(self)
+
+    def data_copy_get_progress(self):
+        """Gets data copy progress of a given share when copying."""
+        return self.manager.data_copy_get_progress(self)
+
     def delete(self, consistency_group_id=None):
         """Delete this share."""
         self.manager.delete(self, consistency_group_id=consistency_group_id)
@@ -193,6 +212,39 @@ class ShareManager(base.ManagerWithFind):
         return self._do_migrate_start(
             share, host, force_host_copy, complete, preserve_metadata,
             writable, "migration_start")
+
+    @api_versions.wraps("2.18")
+    def data_copy_from_share(self, share, dest_share_id, source_path,
+                             dest_path, read_only, check_space,
+                             overwrite_policy):
+        return self._action('data_copy_from_share', share, {
+            'destination_share_id': dest_share_id,
+            'source_path': source_path,
+            'destination_path': dest_path,
+            'read_only': read_only,
+            'check_space': check_space,
+            'overwrite_policy': overwrite_policy,
+        })
+
+    @api_versions.wraps("2.18")
+    def data_erase(self, share, path):
+        return self._action('data_erase', share, {'path': path})
+
+    @api_versions.wraps("2.18")
+    def data_copy_cancel(self, share):
+        """Attempts to cancel data copy for a given share.
+
+        :param share: The :class:'share' to cancel data copy
+        """
+        return self._action('data_copy_cancel', share)
+
+    @api_versions.wraps("2.18")
+    def data_copy_get_progress(self, share):
+        """Obtains progress of data copy for a given share.
+
+        :param share: The :class:'share' to obtain data copy progress
+        """
+        return self._action('data_copy_get_progress', share)
 
     @api_versions.wraps("2.15")
     def reset_task_state(self, share, task_state):
