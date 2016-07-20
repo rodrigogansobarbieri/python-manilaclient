@@ -45,11 +45,11 @@ class Share(common_base.Resource):
 
     def migration_start(self, host, skip_optimized_migration, complete=True,
                         preserve_metadata=True, writable=True,
-                        new_share_network_id=None):
+                        new_share_network_id=None, new_share_type_id=None):
         """Migrate the share to a new host."""
         self.manager.migration_start(self, host, skip_optimized_migration,
                                      complete, preserve_metadata, writable,
-                                     new_share_network_id)
+                                     new_share_network_id, new_share_type_id)
 
     def migration_complete(self):
         """Complete migration of a share."""
@@ -179,7 +179,7 @@ class ShareManager(base.ManagerWithFind):
     @api_versions.experimental_api
     def migration_start(self, share, host, skip_optimized_migration,
                         complete=True, preserve_metadata=True, writable=True,
-                        new_share_network_id=None):
+                        new_share_network_id=None, new_share_type_id=None):
         return self._action(
             "migration_start", share, {
                 "host": host,
@@ -188,6 +188,7 @@ class ShareManager(base.ManagerWithFind):
                 "preserve_metadata": preserve_metadata,
                 "writable": writable,
                 "new_share_network_id": new_share_network_id,
+                "new_share_type_id": new_share_type_id,
             })
 
     @api_versions.wraps("2.15")

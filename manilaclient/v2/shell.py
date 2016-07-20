@@ -689,13 +689,20 @@ def do_migrate(cs, args):
     required=False,
     help='Specifies a new share network if desired to change. Default=None.',
     default=None)
+@cliutils.arg(
+    '--new_share_type_id',
+    '--new-share-type-id',
+    metavar='<new_share_type_id>',
+    required=False,
+    help='Specifies a new share type if desired to change. Default=None.',
+    default=None)
 @api_versions.wraps("2.19")
 def do_migration_start(cs, args):
     """Migrates share to a new host (Admin only, Experimental)."""
     share = _find_share(cs, args.share)
     share.migration_start(args.host, args.skip_optimized_migration,
                           args.complete, args.preserve_metadata, args.writable,
-                          args.new_share_network_id)
+                          args.new_share_network_id, args.new_share_type_id)
 
 
 @cliutils.arg(
