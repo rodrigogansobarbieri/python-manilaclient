@@ -7,6 +7,8 @@ features:
     and be non-disruptive when migrating.
   - Added parameter to change share network when performing
     migration.
+  - Added parameter to change share type when performing
+    migration.
 deprecations:
   - Renamed Share Migration 'force_host_copy' parameter to
     'skip_optimized_migration', to better represent the parameter's

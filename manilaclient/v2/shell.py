@@ -737,6 +737,15 @@ def do_migration_start(cs, args):
     help='Specifies a new share network if desired to change. Default=None. '
          'Introduced in version 2.22.',
     default=None)
+@cliutils.arg(
+    '--new_share_type',
+    '--new-share-type',
+    metavar='<new_share_type>',
+    required=False,
+    action='single_alias',
+    help='Specifies a new share type if desired to change. Default=None. '
+         'Introduced in version 2.22.',
+    default=None)
 def do_migration_start(cs, args):
     """Migrates share to a new host (Admin only, Experimental)."""
     share = _find_share(cs, args.share)
@@ -744,9 +753,14 @@ def do_migration_start(cs, args):
     if args.new_share_network:
         share_net = _find_share_network(cs, args.new_share_network)
         new_share_net_id = share_net.id if share_net else None
+    new_share_type_id = None
+    if args.new_share_type:
+        share_type = _find_share_type(cs, args.new_share_type)
+        new_share_type_id = share_type.id if share_type else None
     share.migration_start(args.host, args.skip_optimized_migration,
                           False, args.preserve_metadata, args.writable,
-                          args.non_disruptive, new_share_net_id)
+                          args.non_disruptive, new_share_net_id,
+                          new_share_type_id)
 
 
 @cliutils.arg(
@@ -1469,7 +1483,7 @@ def do_share_instance_list(cs, args):
 
     list_of_keys = [
         'ID', 'Share ID', 'Host', 'Status', 'Availability Zone',
-        'Share Network ID', 'Share Server ID'
+        'Share Network ID', 'Share Server ID', 'Share Type ID',
     ]
 
     if args.columns is not None:
