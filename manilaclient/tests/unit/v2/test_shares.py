@@ -524,13 +524,14 @@ class SharesTest(utils.TestCase):
     def test_migration_start(self):
         share = "fake_share"
         host = "fake_host"
-        version = api_versions.APIVersion('2.22')
+        version = api_versions.APIVersion('2.26')
         manager = shares.ShareManager(
             api=fakes.FakeClient(api_version=version))
 
         with mock.patch.object(manager, "_action",
                                mock.Mock(return_value="fake")):
-            result = manager.migration_start(share, host, True)
+            result = manager.migration_start(
+                share, host, True, True, True, False, True)
             manager._action.assert_called_once_with(
                 'migration_start', share, {
                     "host": host,
@@ -538,6 +539,7 @@ class SharesTest(utils.TestCase):
                     "preserve_metadata": True,
                     "writable": True,
                     "nondisruptive": False,
+                    "preserve_snapshots": True,
                     "new_share_network_id": None,
                     "new_share_type_id": None,
                 })
