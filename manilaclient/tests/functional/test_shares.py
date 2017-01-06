@@ -17,6 +17,7 @@ import ddt
 
 from tempest.lib.common.utils import data_utils
 
+from manilaclient.common import constants
 from manilaclient import config
 from manilaclient.tests.functional import base
 from manilaclient.tests.functional import utils
@@ -99,19 +100,110 @@ class SharesTestMigration(base.BaseTestCase):
     def setUpClass(cls):
         super(SharesTestMigration, cls).setUpClass()
 
-        cls.share = cls.create_share(
-            share_protocol='nfs',
-            size=1,
-            name=data_utils.rand_name('autotest_share_name'),
-            client=cls.get_user_client(),
-            cleanup_in_class=True)
+        cls.old_type = cls.create_share_type(
+            data_utils.rand_name('autotest_share_name'),
+            driver_handles_share_servers=True)
+        cls.new_type = cls.create_share_type(
+            data_utils.rand_name('autotest_share_name'),
+            driver_handles_share_servers=True)
+
+        cls.old_share_net = cls.get_share_network(
+            cls.get_user_client().share_network)
+        cls.new_share_net = cls.create_share_network(
+            neutron_net_id=cls.old_share_net['neutron_net_id'],
+            neutron_subnet_id=cls.old_share_net['neutron_subnet_id'])
 
     @utils.skip_if_microversion_not_supported('2.22')
     @ddt.data('migration_error', 'migration_success', 'None')
     def test_reset_task_state(self, state):
-        self.admin_client.reset_task_state(self.share['id'], state)
-        share = self.admin_client.get_share(self.share['id'])
+
+        share = self.create_share(
+            share_protocol='nfs',
+            size=1,
+            name=data_utils.rand_name('autotest_share_name'),
+            client=self.get_user_client(),
+            cleanup_in_class=True,
+            share_type=self.old_type['ID'],
+            share_network=self.old_share_net,
+            wait_for_creation=True)
+
+        self.admin_client.reset_task_state(share['id'], state)
+        share = self.admin_client.get_share(share['id'])
         self.assertEqual(state, share['task_state'])
+
+    @utils.skip_if_microversion_not_supported('2.26')
+    @ddt.data('cancel', 'success', 'error')
+    def test_full_migration(self, test_type):
+        # We are testing with DHSS=True only because it allows us to specify
+        # new_share_network.
+
+        share = self.create_share(
+            share_protocol='nfs',
+            size=1,
+            name=data_utils.rand_name('autotest_share_name'),
+            client=self.get_user_client(),
+            cleanup_in_class=True,
+            share_type=self.old_type['ID'],
+            share_network=self.old_share_net,
+            wait_for_creation=True)
+
+        pools = self.admin_client.pool_list(detail=True)
+
+        dest_pool = utils.choose_matching_backend(
+            share, pools, self.new_type)
+
+        self.assertIsNotNone(dest_pool)
+
+        source_pool = share['host']
+
+        self.admin_client.migration_start(
+            share['id'], dest_pool, True, True, True, True, False,
+            self.new_share_net['id'], self.new_type['ID'])
+
+        if test_type == 'error':
+            statuses = constants.TASK_STATE_MIGRATION_ERROR
+        else:
+            statuses = (constants.TASK_STATE_MIGRATION_DRIVER_PHASE1_DONE,
+                        constants.TASK_STATE_DATA_COPYING_COMPLETED)
+
+        share = self.admin_client.wait_for_migration_status(
+            share['id'], dest_pool, statuses)
+
+        progress = self.admin_client.migration_get_progress(share['id'])
+        self.assertEqual('100', progress['total_progress'])
+
+        self.assertEqual(source_pool, share['host'])
+        self.assertEqual(self.old_type['ID'], share['share-type'])
+        self.assertEqual(self.old_share_net['ID'], share['share_network_id'])
+
+        if test_type == 'success':
+            self.admin_client.migration_complete(share['id'])
+            statuses = constants.TASK_STATE_MIGRATION_SUCCESS
+        elif test_type == 'cancel':
+            self.admin_client.migration_cancel(share['id'])
+            statuses = constants.TASK_STATE_MIGRATION_CANCELLED
+        else:
+            # Error scenario is complete
+            self.assertEqual(statuses, progress['task_state'])
+            return
+
+        share = self.admin_client.wait_for_migration_status(
+            share['id'], dest_pool, statuses)
+
+        progress = self.admin_client.migration_get_progress(share['id'])
+        self.assertEqual(statuses, progress['task_state'])
+
+        if test_type == 'success':
+            self.assertEqual(dest_pool, share['host'])
+            self.assertEqual(self.new_type['ID'], share['share-type'])
+            self.assertEqual(self.new_share_net['ID'],
+                             share['share_network_id'])
+
+        else:
+            self.assertEqual(source_pool, share['host'])
+            self.assertEqual(self.old_type['ID'], share['share-type'])
+            self.assertEqual(self.old_share_net['ID'],
+                             share['share_network_id'])
 
 
 class NFSSharesReadWriteTest(SharesReadWriteBase):
